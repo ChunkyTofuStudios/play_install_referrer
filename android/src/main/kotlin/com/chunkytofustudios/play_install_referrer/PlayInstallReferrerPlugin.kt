@@ -1,4 +1,4 @@
-package de.lschmierer.android_play_install_referrer
+package com.chunkytofustudios.play_install_referrer
 
 import android.content.Context
 import androidx.annotation.NonNull
@@ -15,8 +15,7 @@ import android.os.DeadObjectException
 import android.util.Log
 
 
-/** AndroidPlayInstallReferrerPlugin */
-class AndroidPlayInstallReferrerPlugin : FlutterPlugin, MethodCallHandler {
+class PlayInstallReferrerPlugin : FlutterPlugin, MethodCallHandler {
     private lateinit var context: Context
     private lateinit var channel: MethodChannel
     private val pendingResults = ArrayList<Result>(1)
@@ -40,7 +39,7 @@ class AndroidPlayInstallReferrerPlugin : FlutterPlugin, MethodCallHandler {
         this.context = flutterPluginBinding.applicationContext
         channel = MethodChannel(
             flutterPluginBinding.binaryMessenger,
-            "de.lschmierer.android_play_install_referrer")
+            "com.chunkytofustudios.play_install_referrer")
         channel.setMethodCallHandler(this)
     }
 

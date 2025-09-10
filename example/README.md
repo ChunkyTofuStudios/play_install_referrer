@@ -1,6 +1,6 @@
-# android_play_install_referrer_example
+# play_install_referrer_example
 
-Demonstrates how to use the android_play_install_referrer plugin.
+Demonstrates how to use the play_install_referrer plugin.
 
 ## Getting Started
 

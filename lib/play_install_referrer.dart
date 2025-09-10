@@ -58,12 +58,12 @@ class ReferrerDetails {
   }
 
   @override
-  bool operator ==(o) {
-    return o is ReferrerDetails &&
-        o.installReferrer == installReferrer &&
-        o.referrerClickTimestampSeconds == referrerClickTimestampSeconds &&
-        o.installBeginTimestampSeconds == installBeginTimestampSeconds &&
-        o.googlePlayInstantParam == googlePlayInstantParam;
+  bool operator ==(other) {
+    return other is ReferrerDetails &&
+        other.installReferrer == installReferrer &&
+        other.referrerClickTimestampSeconds == referrerClickTimestampSeconds &&
+        other.installBeginTimestampSeconds == installBeginTimestampSeconds &&
+        other.googlePlayInstantParam == googlePlayInstantParam;
   }
 
   @override
@@ -84,9 +84,10 @@ class ReferrerDetails {
   }
 }
 
-class AndroidPlayInstallReferrer {
-  static const MethodChannel _channel =
-      const MethodChannel('de.lschmierer.android_play_install_referrer');
+class PlayInstallReferrer {
+  static const MethodChannel _channel = MethodChannel(
+    'com.chunkytofustudios.play_install_referrer',
+  );
 
   /// Get installation referrer details.
   ///

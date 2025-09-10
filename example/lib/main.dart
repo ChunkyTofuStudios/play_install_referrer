@@ -1,17 +1,18 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-
-import 'package:android_play_install_referrer/android_play_install_referrer.dart';
+import 'package:play_install_referrer/play_install_referrer.dart';
 
 void main() => runApp(MyApp());
 
 class MyApp extends StatefulWidget {
+  const MyApp({super.key});
+
   @override
-  _MyAppState createState() => _MyAppState();
+  MyAppState createState() => MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class MyAppState extends State<MyApp> {
   String _referrerDetails = '';
 
   @override
@@ -25,7 +26,8 @@ class _MyAppState extends State<MyApp> {
     String referrerDetailsString;
     // Platform messages may fail, so we use a try/catch PlatformException.
     try {
-      ReferrerDetails referrerDetails = await AndroidPlayInstallReferrer.installReferrer;
+      ReferrerDetails referrerDetails =
+          await PlayInstallReferrer.installReferrer;
 
       referrerDetailsString = referrerDetails.toString();
     } catch (e) {
@@ -46,12 +48,8 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       home: Scaffold(
-        appBar: AppBar(
-          title: const Text('Plugin example app'),
-        ),
-        body: Center(
-          child: Text('Referrer Details: $_referrerDetails'),
-        ),
+        appBar: AppBar(title: const Text('Plugin example app')),
+        body: Center(child: Text('Referrer Details: $_referrerDetails')),
       ),
     );
   }

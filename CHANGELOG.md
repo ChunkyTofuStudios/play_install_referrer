@@ -1,3 +1,10 @@
+## 0.5.0
+* BREAKING: Plugin is renamed AndroidPlayInstallReferrer -> PlayInstallReferrer
+* Updates Gradle and AGP
+* Updates Android compileSDK to 36
+* Fixes DeadObjectException (by @levBerlinkov)
+* Plugin is now maintained by Chunky Tofu Studios
+
 ## 0.4.0
 * Updates Gradle to 8.3
 * Updates AGP to 8.1.0

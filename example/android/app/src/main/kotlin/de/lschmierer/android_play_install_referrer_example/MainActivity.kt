@@ -1,6 +1,5 @@
-package de.lschmierer.android_play_install_referrer_example
+package com.chunkytofustudios.play_install_referrer_example
 
 import io.flutter.embedding.android.FlutterActivity
 
-class MainActivity: FlutterActivity() {
-}
+class MainActivity: FlutterActivity() {}
