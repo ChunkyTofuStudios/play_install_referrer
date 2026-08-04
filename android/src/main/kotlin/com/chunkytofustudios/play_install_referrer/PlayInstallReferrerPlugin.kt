@@ -1,6 +1,10 @@
 package com.chunkytofustudios.play_install_referrer
 
 import android.content.Context
+import android.os.DeadObjectException
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
 import androidx.annotation.NonNull
 import com.android.installreferrer.api.InstallReferrerClient
 import com.android.installreferrer.api.InstallReferrerStateListener
@@ -10,14 +14,17 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
 import kotlin.collections.ArrayList
-import android.os.DeadObjectException
-import android.util.Log
 
 
 class PlayInstallReferrerPlugin : FlutterPlugin, MethodCallHandler {
     private lateinit var context: Context
     private lateinit var channel: MethodChannel
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var installReferrerExecutor: ExecutorService? = null
     private val pendingResults = ArrayList<Result>(1)
     private var referrerClient: InstallReferrerClient? = null
     private var referrerDetails: ReferrerDetails? = null
@@ -37,6 +44,7 @@ class PlayInstallReferrerPlugin : FlutterPlugin, MethodCallHandler {
 
     override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         this.context = flutterPluginBinding.applicationContext
+        installReferrerExecutor = Executors.newSingleThreadExecutor()
         channel = MethodChannel(
             flutterPluginBinding.binaryMessenger,
             "com.chunkytofustudios.play_install_referrer")
@@ -56,6 +64,9 @@ class PlayInstallReferrerPlugin : FlutterPlugin, MethodCallHandler {
     override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
         pendingResults.clear()
         referrerClient?.endConnection()
+        referrerClient = null
+        installReferrerExecutor?.shutdownNow()
+        installReferrerExecutor = null
         channel.setMethodCallHandler(null)
     }
 
@@ -90,20 +101,13 @@ class PlayInstallReferrerPlugin : FlutterPlugin, MethodCallHandler {
 
     @Synchronized
     private fun handleOnInstallReferrerSetupFinished(responseCode: Int) {
+        if (responseCode == InstallReferrerClient.InstallReferrerResponse.OK) {
+            fetchInstallReferrerInBackground()
+            return
+        }
+
         try {
             when (responseCode) {
-                InstallReferrerClient.InstallReferrerResponse.OK -> {
-                    referrerClient?.let {
-                        try {
-                            referrerDetails = it.installReferrer
-                        } catch (e: DeadObjectException) {
-                            Log.e("InstallReferrer", "DeadObjectException while fetching referrer: ${e.message}", e)
-                            referrerError = Pair("DEAD_OBJECT_EXCEPTION", "Service connection lost while retrieving data.")
-                        }
-                    } ?: run {
-                        referrerError = Pair("BAD_STATE", "Referrer client is null.")
-                    }
-                }
                 InstallReferrerClient.InstallReferrerResponse.SERVICE_DISCONNECTED -> {
                     referrerError = Pair("SERVICE_DISCONNECTED", "Play Store service is not connected now.")
                 }
@@ -130,6 +134,79 @@ class PlayInstallReferrerPlugin : FlutterPlugin, MethodCallHandler {
 
         resolvePendingInstallReferrerResults()
         referrerClient?.endConnection()
+        referrerClient = null
+    }
+
+    @Synchronized
+    private fun fetchInstallReferrerInBackground() {
+        val client = referrerClient
+        if (client == null) {
+            referrerError = Pair("BAD_STATE", "Referrer client is null.")
+            resolvePendingInstallReferrerResults()
+            return
+        }
+
+        val executor = installReferrerExecutor
+        if (executor == null) {
+            referrerError = Pair("BAD_STATE", "Install Referrer worker is not available.")
+            resolvePendingInstallReferrerResults()
+            client.endConnection()
+            referrerClient = null
+            return
+        }
+
+        try {
+            executor.execute {
+                var details: ReferrerDetails? = null
+                var error: Pair<String, String>? = null
+
+                try {
+                    // getInstallReferrer performs a synchronous Binder transaction. Running it
+                    // on the platform thread can freeze the UI if the Play Store is slow.
+                    details = client.installReferrer
+                } catch (e: DeadObjectException) {
+                    Log.e("InstallReferrer", "DeadObjectException while fetching referrer: ${e.message}", e)
+                    error = Pair("DEAD_OBJECT_EXCEPTION", "Service connection lost while retrieving data.")
+                } catch (e: Exception) {
+                    Log.e("InstallReferrer", "Unexpected error while fetching referrer: ${e.message}", e)
+                    error = Pair("UNEXPECTED_ERROR", "An unexpected error occurred while retrieving data.")
+                }
+
+                mainHandler.post {
+                    completeInstallReferrerFetch(client, details, error)
+                }
+            }
+        } catch (e: RejectedExecutionException) {
+            Log.e("InstallReferrer", "Install Referrer worker rejected the request: ${e.message}", e)
+            referrerError = Pair("BAD_STATE", "Install Referrer worker is not available.")
+            resolvePendingInstallReferrerResults()
+            client.endConnection()
+            referrerClient = null
+        }
+    }
+
+    @Synchronized
+    private fun completeInstallReferrerFetch(
+        client: InstallReferrerClient,
+        details: ReferrerDetails?,
+        error: Pair<String, String>?
+    ) {
+        // Ignore a stale result after detachment or reconnection.
+        if (referrerClient !== client) {
+            client.endConnection()
+            return
+        }
+
+        referrerDetails = details
+        referrerError = error ?: if (details == null) {
+            Pair("UNEXPECTED_ERROR", "Install Referrer returned no data.")
+        } else {
+            null
+        }
+
+        resolvePendingInstallReferrerResults()
+        client.endConnection()
+        referrerClient = null
     }
 
     @Synchronized
@@ -164,6 +241,7 @@ class PlayInstallReferrerPlugin : FlutterPlugin, MethodCallHandler {
 
     private fun retryConnection() {
         try {
+            referrerClient?.endConnection()
             referrerClient = InstallReferrerClient.newBuilder(context).build()
             referrerClient?.startConnection(object : InstallReferrerStateListener {
                 override fun onInstallReferrerSetupFinished(responseCode: Int) {
