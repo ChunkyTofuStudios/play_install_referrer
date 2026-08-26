@@ -95,10 +95,17 @@ class PlayInstallReferrerPlugin : FlutterPlugin, MethodCallHandler {
                 InstallReferrerClient.InstallReferrerResponse.OK -> {
                     referrerClient?.let {
                         try {
-                            referrerDetails = it.installReferrer
+                            val details = it.installReferrer
+                            // Play can return OK with a ReferrerDetails whose
+                            // internal Bundle is null; any getter then NPEs.
+                            details.installReferrer
+                            referrerDetails = details
                         } catch (e: DeadObjectException) {
                             Log.e("InstallReferrer", "DeadObjectException while fetching referrer: ${e.message}", e)
                             referrerError = Pair("DEAD_OBJECT_EXCEPTION", "Service connection lost while retrieving data.")
+                        } catch (e: NullPointerException) {
+                            Log.e("InstallReferrer", "Null referrer Bundle: ${e.message}", e)
+                            referrerError = Pair("NULL_REFERRER_DETAILS", "Install referrer details Bundle was null.")
                         }
                     } ?: run {
                         referrerError = Pair("BAD_STATE", "Referrer client is null.")
@@ -143,17 +150,26 @@ class PlayInstallReferrerPlugin : FlutterPlugin, MethodCallHandler {
     @Synchronized
     private fun resolveInstallReferrerResult(@NonNull result: Result) {
         referrerDetails?.let {
-            result.success(
-                mapOf(
-                    "installReferrer" to it.installReferrer,
-                    "referrerClickTimestampSeconds" to it.referrerClickTimestampSeconds,
-                    "installBeginTimestampSeconds" to it.installBeginTimestampSeconds,
-                    "referrerClickTimestampServerSeconds" to it.referrerClickTimestampServerSeconds,
-                    "installBeginTimestampServerSeconds" to it.installBeginTimestampServerSeconds,
-                    "installVersion" to it.installVersion,
-                    "googlePlayInstantParam" to it.googlePlayInstantParam
+            try {
+                result.success(
+                    mapOf(
+                        "installReferrer" to it.installReferrer,
+                        "referrerClickTimestampSeconds" to it.referrerClickTimestampSeconds,
+                        "installBeginTimestampSeconds" to it.installBeginTimestampSeconds,
+                        "referrerClickTimestampServerSeconds" to it.referrerClickTimestampServerSeconds,
+                        "installBeginTimestampServerSeconds" to it.installBeginTimestampServerSeconds,
+                        "installVersion" to it.installVersion,
+                        "googlePlayInstantParam" to it.googlePlayInstantParam
+                    )
                 )
-            )
+            } catch (e: NullPointerException) {
+                Log.e("InstallReferrer", "Null referrer Bundle on resolve: ${e.message}", e)
+                result.error(
+                    "NULL_REFERRER_DETAILS",
+                    "Install referrer details Bundle was null.",
+                    null
+                )
+            }
             return
         }
         referrerError?.let {
