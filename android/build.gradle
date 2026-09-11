@@ -22,7 +22,14 @@ rootProject.allprojects {
 }
 
 apply plugin: 'com.android.library'
-apply plugin: 'kotlin-android'
+
+// AGP 9+ provides built-in Kotlin. Applying KGP on top of it is deprecated by
+// Flutter and will become a build error in a future Flutter release.
+def agpMajor = com.android.Version.ANDROID_GRADLE_PLUGIN_VERSION.tokenize('.')[0] as int
+def usesBuiltInKotlin = project.findProperty('android.builtInKotlin') == 'true'
+if (agpMajor < 9 || !usesBuiltInKotlin) {
+    apply plugin: 'kotlin-android'
+}
 
 android {
     namespace 'com.chunkytofustudios.play_install_referrer'
@@ -32,10 +39,6 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-    }
-
-    kotlinOptions {
-        jvmTarget = '17'
     }
 
     sourceSets {
@@ -63,6 +66,12 @@ android {
                showStandardStreams = true
             }
         }
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
     }
 }
 
