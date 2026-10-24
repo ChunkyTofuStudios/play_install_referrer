@@ -1,3 +1,7 @@
+## 0.6.0
+* Updates the minimum supported SDK version to Flutter 3.44/Dart 3.12
+* Migrates to built-in Kotlin (by @YoannSACHOT)
+
 ## 0.5.0
 * BREAKING: Plugin is renamed AndroidPlayInstallReferrer -> PlayInstallReferrer
 * Updates Gradle and AGP
