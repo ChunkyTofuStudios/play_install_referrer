@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.annotation.NonNull
 import com.android.installreferrer.api.InstallReferrerClient
 import com.android.installreferrer.api.InstallReferrerStateListener
-import com.android.installreferrer.api.ReferrerDetails
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -20,7 +19,7 @@ class PlayInstallReferrerPlugin : FlutterPlugin, MethodCallHandler {
     private lateinit var channel: MethodChannel
     private val pendingResults = ArrayList<Result>(1)
     private var referrerClient: InstallReferrerClient? = null
-    private var referrerDetails: ReferrerDetails? = null
+    private var referrerDetails: Map<String, Any?>? = null
     private var referrerError: Pair<String, String>? = null
 
     private val isInstallReferrerPending: Boolean
@@ -95,7 +94,18 @@ class PlayInstallReferrerPlugin : FlutterPlugin, MethodCallHandler {
                 InstallReferrerClient.InstallReferrerResponse.OK -> {
                     referrerClient?.let {
                         try {
-                            referrerDetails = it.installReferrer
+                            // Read every field now, inside the try: Play can return OK with a
+                            // ReferrerDetails whose internal Bundle is null, and its getters throw.
+                            val details = it.installReferrer
+                            referrerDetails = mapOf(
+                                "installReferrer" to details.installReferrer,
+                                "referrerClickTimestampSeconds" to details.referrerClickTimestampSeconds,
+                                "installBeginTimestampSeconds" to details.installBeginTimestampSeconds,
+                                "referrerClickTimestampServerSeconds" to details.referrerClickTimestampServerSeconds,
+                                "installBeginTimestampServerSeconds" to details.installBeginTimestampServerSeconds,
+                                "installVersion" to details.installVersion,
+                                "googlePlayInstantParam" to details.googlePlayInstantParam
+                            )
                         } catch (e: DeadObjectException) {
                             Log.e("InstallReferrer", "DeadObjectException while fetching referrer: ${e.message}", e)
                             referrerError = Pair("DEAD_OBJECT_EXCEPTION", "Service connection lost while retrieving data.")
@@ -143,17 +153,7 @@ class PlayInstallReferrerPlugin : FlutterPlugin, MethodCallHandler {
     @Synchronized
     private fun resolveInstallReferrerResult(@NonNull result: Result) {
         referrerDetails?.let {
-            result.success(
-                mapOf(
-                    "installReferrer" to it.installReferrer,
-                    "referrerClickTimestampSeconds" to it.referrerClickTimestampSeconds,
-                    "installBeginTimestampSeconds" to it.installBeginTimestampSeconds,
-                    "referrerClickTimestampServerSeconds" to it.referrerClickTimestampServerSeconds,
-                    "installBeginTimestampServerSeconds" to it.installBeginTimestampServerSeconds,
-                    "installVersion" to it.installVersion,
-                    "googlePlayInstantParam" to it.googlePlayInstantParam
-                )
-            )
+            result.success(it)
             return
         }
         referrerError?.let {
