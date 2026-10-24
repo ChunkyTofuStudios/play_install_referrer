@@ -1,9 +1,7 @@
-## Unreleased
+## 0.6.0
 * Fetches the install referrer off the Android main thread to prevent ANRs when the Play Store is slow (by @offline-first)
 * Fails with a `TIMEOUT` error instead of waiting forever if the Play Store doesn't respond within 10 seconds
 * Fixes a crash when the Play Store returns no referrer data (by @ak-cipher)
-
-## 0.6.0
 * Updates the minimum supported SDK version to Flutter 3.44/Dart 3.12
 * Migrates to built-in Kotlin (by @YoannSACHOT)
 
