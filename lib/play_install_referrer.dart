@@ -92,6 +92,8 @@ class PlayInstallReferrer {
   /// Get installation referrer details.
   ///
   /// Throws an exception on iOS and if Google Play Services are not available on Android.
+  /// Throws a [PlatformException] with code `TIMEOUT` if the Play Store doesn't respond
+  /// within 10 seconds.
   static Future<ReferrerDetails> get installReferrer async {
     final Map details = await _channel.invokeMethod('getInstallReferrer');
 

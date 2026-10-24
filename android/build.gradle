@@ -46,6 +46,12 @@ android {
     dependencies {
         testImplementation 'org.jetbrains.kotlin:kotlin-test'
         testImplementation 'org.mockito:mockito-core:5.18.0'
+        testImplementation 'junit:junit:4.13.2'
+        testImplementation 'org.robolectric:robolectric:4.17'
+        // Robolectric tests are JUnit 4; the vintage engine runs them on the JUnit Platform.
+        testImplementation platform('org.junit:junit-bom:5.14.4')
+        testRuntimeOnly 'org.junit.vintage:junit-vintage-engine'
+        testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     }
 
     testOptions {
